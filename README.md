@@ -10,19 +10,16 @@ demonstrates using the Docker image with the
 Running
 -------
 
-To try it:
-1. Install requirements
-2. Run ``./run_test.sh``
-
-Tested with Python 3.7.2.
+To try it, run ``./run_test.sh``.
 
 Notes
 -----
 
-The ``init_buckets`` folder is mounted in the container at ``/data``. The
-folder is used to create buckets and items in those buckets. I was unable to
-create buckets using the normal GCS library calls (``405 Method Not Allowed``
-on a ``POST``), so this is required to create the initial buckets.
+The ``server/init_buckets`` folder is mounted in the server container at
+``/data``. The folder is used to create buckets and items in those buckets. I
+was unable to create buckets using the normal GCS library calls
+(``405 Method Not Allowed`` on a ``POST``), so this is required to create the
+initial buckets.
 
 The files are copied to the ``/storage`` folder in the container. In 0.1.0 of
 the Docker image, this folder is created on startup, by the process that

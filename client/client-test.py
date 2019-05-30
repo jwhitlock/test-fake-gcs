@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """Test of Google Cloud Storage library against gc-fake-storage"""
 
+import os
+
 from google.cloud import storage
 from google.auth.credentials import AnonymousCredentials
 import requests
 import urllib3
 
+SERVER_URL = os.environ.get('SERVER_URL', '')
+assert SERVER_URL, 'Set SERVER_URL in the environment'
+print("Connecting to GCS server at %s" % SERVER_URL)
 
-BASE_URL = "https://127.0.0.1:4443"
-
-storage._http.Connection.API_BASE_URL = BASE_URL # override the BASE_URL in the client library with the mock server
-storage.blob._DOWNLOAD_URL_TEMPLATE = (u"%s/download/storage/v1{path}?alt=media" % BASE_URL)
-storage.blob._BASE_UPLOAD_TEMPLATE = (u"%s/upload/storage/v1{bucket_path}/o?uploadType=" % BASE_URL)
+storage._http.Connection.API_BASE_URL = SERVER_URL # override the SERVER_URL in the client library with the mock server
+storage.blob._DOWNLOAD_URL_TEMPLATE = (u"%s/download/storage/v1{path}?alt=media" % SERVER_URL)
+storage.blob._BASE_UPLOAD_TEMPLATE = (u"%s/upload/storage/v1{bucket_path}/o?uploadType=" % SERVER_URL)
 storage.blob._MULTIPART_URL_TEMPLATE = storage.blob._BASE_UPLOAD_TEMPLATE + u"multipart"
 storage.blob._RESUMABLE_URL_TEMPLATE = storage.blob._BASE_UPLOAD_TEMPLATE + u"resumable"
 
