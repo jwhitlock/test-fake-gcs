@@ -18,11 +18,7 @@ Notes
 
 The ``server/init_buckets`` folder is mounted in the server container at
 ``/data``. The folder is used to create buckets and items in those buckets.
-
-The files are copied to the ``/storage`` folder in the container. In 0.1.0 of
-the Docker image, this folder is created on startup, by the process that
-copies files from ``/data``. If you omit the ``/data`` mount, then some GCS
-operations may fail with a 404.
+The files are copied to the ``/storage`` folder in the container.
 
 [Python library for Google Cloud Storage]: https://github.com/googleapis/google-cloud-python/tree/master/storage
 [jwhitlock/gc-fake-storage]: https://github.com/jwhitlock/gc-fake-storage
