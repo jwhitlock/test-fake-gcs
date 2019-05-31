@@ -4,39 +4,8 @@
 import os
 import uuid
 
-from google.auth.credentials import AnonymousCredentials
+from fake_client import FakeClient
 from google.cloud import storage
-import requests
-import urllib3
-
-
-class FakeClient(storage.Client):
-    """Client to bundle configuration needed for API requests to faked GCS."""
-
-    def __init__(self, server_url, project="fake"):
-        """Initialize a FakeClient."""
-
-        self.server_url = server_url
-
-        # Create a session that is OK talking over insecure HTTPS
-        # - Doesn't validate SSL, doesn't warn about insecure certs
-        weak_http = requests.Session()
-        weak_http.verify = False
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-        # Initialize the base class
-        super().__init__(
-            project=project,
-            credentials=AnonymousCredentials(),
-            _http=weak_http)
-
-        class Connection(storage._http.Connection):
-            """A connection to our fake Google Cloud Storage."""
-            API_BASE_URL = server_url
-
-        # Swap out the Connection class
-        self._base_connection = None
-        self._connection = Connection(self)
 
 
 def list_buckets(client, header=None):
@@ -92,14 +61,21 @@ if __name__ == "__main__":
     assert SERVER_URL, 'Set SERVER_URL in the environment'
     print("Connecting to GCS server at %s" % SERVER_URL)
 
-    storage.blob._DOWNLOAD_URL_TEMPLATE = (
-        u"%s/download/storage/v1{path}?alt=media" % SERVER_URL)
-    storage.blob._BASE_UPLOAD_TEMPLATE = (
-        u"%s/upload/storage/v1{bucket_path}/o?uploadType=" % SERVER_URL)
-    storage.blob._MULTIPART_URL_TEMPLATE = (
-        storage.blob._BASE_UPLOAD_TEMPLATE + u"multipart")
-    storage.blob._RESUMABLE_URL_TEMPLATE = (
-        storage.blob._BASE_UPLOAD_TEMPLATE + u"resumable")
+    # FakeClient changes some module variables
+    old_value = storage.blob._DOWNLOAD_URL_TEMPLATE
+    print("Before using FakeClient, DOWNLOAD_URL_TEMPLATE=%r" % old_value)
 
-    client = FakeClient(SERVER_URL)
-    run_tests(client)
+    with FakeClient(SERVER_URL) as client:
+        new_value = storage.blob._DOWNLOAD_URL_TEMPLATE
+        print(
+            "After initializing FakeClient, DOWNLOAD_URL_TEMPLATE=%r"
+            % new_value)
+        assert new_value != old_value
+        run_tests(client)
+
+    # FakeClient resets module variables when used as context
+    returned_value = storage.blob._DOWNLOAD_URL_TEMPLATE
+    print(
+        "After closing FakeClient, DOWNLOAD_URL_TEMPLATE=%r"
+        % storage.blob._DOWNLOAD_URL_TEMPLATE)
+    assert returned_value == old_value
