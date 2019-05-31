@@ -2,7 +2,7 @@
 set -e  # Stop on first failing command
 
 echo "Stopping any previous runs..."
-docker-compose stop
+docker-compose down
 
 echo "Building images..."
 docker-compose build server

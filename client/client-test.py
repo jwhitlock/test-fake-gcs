@@ -38,14 +38,11 @@ def list_buckets(header=None):
 list_buckets('FILES AT START')
 
 # Can't create a bucket - issue w/ anon creds?
-bucket_name = 'storage'
+bucket_name = 'test'
 test_file = 'test.txt'
 
-# Can't create a bucket - issue with anonymous creds? emulation limitation?
-# bucket.client.create_bucket(bucket_name)
-
-# Load a bucket
-bucket = client.get_bucket(bucket_name)
+# Create the bucket
+bucket = client.create_bucket(bucket_name)
 
 # Create a file in the bucket
 blob = storage.blob.Blob(test_file, bucket=bucket)
