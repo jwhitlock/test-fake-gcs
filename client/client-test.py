@@ -24,16 +24,18 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) # disable ht
 
 client = storage.Client(credentials=AnonymousCredentials(), project="test", _http=my_http)
 
-def list_buckets():
+def list_buckets(header=None):
+    if header:
+        print(header)
+        print('-' * len(header))
     for bucket in client.list_buckets():
         print('Bucket "%s":' % bucket.name)
         for blob in bucket.list_blobs():
             print('- %s' % blob.name)
+    if header:
+        print()
 
-print("FILES AT START")
-print("--------------")
-list_buckets()
-print()
+list_buckets('FILES AT START')
 
 # Can't create a bucket - issue w/ anon creds?
 bucket_name = 'storage'
@@ -53,10 +55,7 @@ This is a test file.
 It has a few lines.
 """)
 
-print("FILES AFTER UPLOAD")
-print("------------------")
-list_buckets()
-print()
+list_buckets('FILES AFTER UPLOAD')
 
 # List the file contents
 print("CONTENTS OF TEST FILE")
@@ -71,7 +70,4 @@ print()
 blob = bucket.get_blob(test_file)
 blob.delete()
 
-print("FILES AFTER DELETION")
-print("--------------------")
-list_buckets()
-print()
+list_buckets('FILES AFTER DELETION')
