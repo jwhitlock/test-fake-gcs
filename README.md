@@ -11,7 +11,7 @@ server, available at [matteoscandolo/gc-fake-storage].
 Running
 -------
 
-To try it, run ``./run_test.sh``.
+To try it, run ``make test``.
 
 Notes
 -----
