@@ -2,29 +2,45 @@
 """Test of Google Cloud Storage library against gc-fake-storage"""
 
 import os
+import uuid
 
-from google.cloud import storage
 from google.auth.credentials import AnonymousCredentials
+from google.cloud import storage
 import requests
 import urllib3
 
-SERVER_URL = os.environ.get('SERVER_URL', '')
-assert SERVER_URL, 'Set SERVER_URL in the environment'
-print("Connecting to GCS server at %s" % SERVER_URL)
 
-storage._http.Connection.API_BASE_URL = SERVER_URL # override the SERVER_URL in the client library with the mock server
-storage.blob._DOWNLOAD_URL_TEMPLATE = (u"%s/download/storage/v1{path}?alt=media" % SERVER_URL)
-storage.blob._BASE_UPLOAD_TEMPLATE = (u"%s/upload/storage/v1{bucket_path}/o?uploadType=" % SERVER_URL)
-storage.blob._MULTIPART_URL_TEMPLATE = storage.blob._BASE_UPLOAD_TEMPLATE + u"multipart"
-storage.blob._RESUMABLE_URL_TEMPLATE = storage.blob._BASE_UPLOAD_TEMPLATE + u"resumable"
+class FakeClient(storage.Client):
+    """Client to bundle configuration needed for API requests to faked GCS."""
 
-my_http = requests.Session()
-my_http.verify = False  # disable SSL validation
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) # disable https warnings for https insecure certs
+    def __init__(self, server_url, project="fake"):
+        """Initialize a FakeClient."""
 
-client = storage.Client(credentials=AnonymousCredentials(), project="test", _http=my_http)
+        self.server_url = server_url
 
-def list_buckets(header=None):
+        # Create a session that is OK talking over insecure HTTPS
+        # - Doesn't validate SSL, doesn't warn about insecure certs
+        weak_http = requests.Session()
+        weak_http.verify = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        # Initialize the base class
+        super().__init__(
+            project=project,
+            credentials=AnonymousCredentials(),
+            _http=weak_http)
+
+        class Connection(storage._http.Connection):
+            """A connection to our fake Google Cloud Storage."""
+            API_BASE_URL = server_url
+
+        # Swap out the Connection class
+        self._base_connection = None
+        self._connection = Connection(self)
+
+
+def list_buckets(client, header=None):
+    """Print contents of buckets."""
     if header:
         print(header)
         print('-' * len(header))
@@ -35,36 +51,55 @@ def list_buckets(header=None):
     if header:
         print()
 
-list_buckets('FILES AT START')
 
-# Can't create a bucket - issue w/ anon creds?
-bucket_name = 'test'
-test_file = 'test.txt'
+def run_tests(client, bucket_name=None, object_name=None):
+    """Test a GCS server.
 
-# Create the bucket
-bucket = client.create_bucket(bucket_name)
+    :arg:client: A client authorized to create buckets
+    :arg:bucket_name: The name of a test bucket to create
+    :arg:object_name: The name of a test object to create
+    """
 
-# Create a file in the bucket
-blob = storage.blob.Blob(test_file, bucket=bucket)
-blob.upload_from_string("""\
-This is a test file.
+    bucket_name = bucket_name or "test_%s" % uuid.uuid4()
+    object_name = object_name or "test_%s.txt" % uuid.uuid4()
 
-It has a few lines.
-""")
+    list_buckets(client, 'FILES AT START')
 
-list_buckets('FILES AFTER UPLOAD')
+    # Create the bucket
+    bucket = client.create_bucket(bucket_name)
 
-# List the file contents
-print("CONTENTS OF TEST FILE")
-print("---------------------")
-blob = bucket.get_blob(test_file)
-contents = blob.download_as_string()
-print(contents.decode('utf8'))
-print("---------------------")
-print()
+    # Create a file in the bucket
+    blob = bucket.blob(object_name)
+    blob.upload_from_string("This is a test file.\n\nIt has a few lines.\n")
+    list_buckets(client, 'FILES AFTER UPLOAD')
 
-# Delete the file
-blob = bucket.get_blob(test_file)
-blob.delete()
+    # List the file contents
+    print("CONTENTS OF TEST FILE")
+    print("---------------------")
+    blob = bucket.get_blob(object_name)
+    contents = blob.download_as_string()
+    print(contents.decode('utf8'))
+    print("---------------------")
+    print()
 
-list_buckets('FILES AFTER DELETION')
+    # Delete the file
+    blob.delete()
+    list_buckets(client, 'FILES AFTER DELETION')
+
+
+if __name__ == "__main__":
+    SERVER_URL = os.environ.get('SERVER_URL', '')
+    assert SERVER_URL, 'Set SERVER_URL in the environment'
+    print("Connecting to GCS server at %s" % SERVER_URL)
+
+    storage.blob._DOWNLOAD_URL_TEMPLATE = (
+        u"%s/download/storage/v1{path}?alt=media" % SERVER_URL)
+    storage.blob._BASE_UPLOAD_TEMPLATE = (
+        u"%s/upload/storage/v1{bucket_path}/o?uploadType=" % SERVER_URL)
+    storage.blob._MULTIPART_URL_TEMPLATE = (
+        storage.blob._BASE_UPLOAD_TEMPLATE + u"multipart")
+    storage.blob._RESUMABLE_URL_TEMPLATE = (
+        storage.blob._BASE_UPLOAD_TEMPLATE + u"resumable")
+
+    client = FakeClient(SERVER_URL)
+    run_tests(client)
