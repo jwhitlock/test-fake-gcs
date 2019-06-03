@@ -3,8 +3,7 @@
 version: "3.0"
 services:
   server:
-    build: https://github.com/jwhitlock/gc-fake-storage.git#test
-    image: jwhitlock/gc-fake-storage
+    image: jwhitlock/gc-fake-storage:test
     volumes:
       - ./server/init_buckets:/data
 
