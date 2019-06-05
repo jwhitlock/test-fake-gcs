@@ -4,6 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """Test of Google Cloud Storage library against gc-fake-storage"""
 
+import hashlib
 import os
 import uuid
 
@@ -80,12 +81,40 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
     if test_file_dir:
         print("UPLOADING TEST FILES")
         print("--------------------")
+        signatures = {}
         for obj_name, path in test_files(test_file_dir):
+            # Calculate the hash, size
+            sha1 = hashlib.sha1()
+            size = 0
+            with open(path, 'rb') as test_file:
+                while True:
+                    data = test_file.read(1024)
+                    if not data:
+                        break
+                    size += len(data)
+                    sha1.update(data)
+                signatures[obj_name] = (size, sha1.hexdigest())
+
+            # Upload the file
             print("Uploading %s as %s" % (path, obj_name))
             blob = bucket.blob(obj_name)
             blob.upload_from_filename(path)
         print()
         list_buckets(client,"AFTER UPLOADING TEST FILES")
+
+        # Verify files
+        for obj_name, sig in signatures.items():
+            blob = bucket.get_blob(obj_name)
+            contents = blob.download_as_string()
+            sha1 = hashlib.sha1(contents)
+            size = len(contents)
+            sig_out = (size, sha1.hexdigest())
+            if sig == sig_out:
+                print("%s: OK (size=%s, sha1=%s)" %
+                      (obj_name, size, sig_out[1]))
+            else:
+                print("%s: Not OK! (size=%s -> %s, sha1=%s -> %s)" %
+                      (obj_name, sig[0], size, sig[1], sig_out[1]))
 
 
 if __name__ == "__main__":
