@@ -1,0 +1,5 @@
+# Place files here to test uploading
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore

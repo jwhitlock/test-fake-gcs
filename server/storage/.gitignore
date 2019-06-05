@@ -1,0 +1,7 @@
+# This is the internal storage folder of gc-fake-storage
+# Buckets are directories, and blobs are files containing JSON
+#
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore

@@ -24,12 +24,30 @@ def list_buckets(client, header=None):
         print()
 
 
-def run_tests(client, bucket_name=None, object_name=None):
+def test_files(rootDir):
+    """Return files to upload in the test directory."""
+    for dirName, subdirList, fileList in os.walk(rootDir):
+        for fname in fileList:
+            full_path = os.path.join(dirName, fname)
+
+            # Create a object path relative to the bucket
+            obj_path = full_path.replace(rootDir, '')
+            while obj_path.startswith('/'):
+                obj_path = obj_path[1:]
+
+            if obj_path == '.gitignore':
+                continue
+
+            yield obj_path, full_path
+
+
+def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
     """Test a GCS server.
 
     :arg:client: A client authorized to create buckets
     :arg:bucket_name: The name of a test bucket to create
     :arg:object_name: The name of a test object to create
+    :arg:test_file_dir: The path to a directory of test files to upload
     """
 
     bucket_name = bucket_name or "test_%s" % uuid.uuid4()
@@ -58,11 +76,24 @@ def run_tests(client, bucket_name=None, object_name=None):
     blob.delete()
     list_buckets(client, 'FILES AFTER DELETION')
 
+    # Upload any test files
+    if test_file_dir:
+        print("UPLOADING TEST FILES")
+        print("--------------------")
+        for obj_name, path in test_files(test_file_dir):
+            print("Uploading %s as %s" % (path, obj_name))
+            blob = bucket.blob(obj_name)
+            blob.upload_from_filename(path)
+        print()
+        list_buckets(client,"AFTER UPLOADING TEST FILES")
+
 
 if __name__ == "__main__":
     SERVER_URL = os.environ.get('SERVER_URL', '')
     assert SERVER_URL, 'Set SERVER_URL in the environment'
     print("Connecting to GCS server at %s" % SERVER_URL)
+
+    TEST_FILE_DIR = os.environ.get('TEST_FILE_DIR', '')
 
     # FakeClient changes some module variables
     old_value = storage.blob._DOWNLOAD_URL_TEMPLATE
@@ -74,7 +105,7 @@ if __name__ == "__main__":
             "After initializing FakeClient, DOWNLOAD_URL_TEMPLATE=%r"
             % new_value)
         assert new_value != old_value
-        run_tests(client)
+        run_tests(client, test_file_dir=TEST_FILE_DIR)
 
     # FakeClient resets module variables when used as context
     returned_value = storage.blob._DOWNLOAD_URL_TEMPLATE

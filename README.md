@@ -37,9 +37,18 @@ are updated when initialing a ``FakeClient``. This would affect other users
 of the Python GCS libraries. The ``FakeClient`` can be initialized as a
 context manager, which will undo the changes when exiting the context.
 
+The ``client/files`` folder can be used to test your own files for server
+upload. A file smaller than 8 MB will be uploaded using the multipart upload
+strategy. A larger file will be uploaded with the resumable upload API in
+multiple requests.
+
 The ``server/init_buckets`` folder is mounted in the server container at
 ``/data``. The folder is used to create buckets and items in those buckets.
 The files are copied to the ``/storage`` folder in the container.
+
+The ``server/storage`` folder contains the internal representation of
+the fake storage. It is composed of buckets as folders, and object / blobs as
+files with JSON content.
 
 Deleting buckets is not (yet) supported by ``fsouza/fake-gcs-server``.
 

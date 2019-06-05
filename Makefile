@@ -18,12 +18,23 @@ default:
 	@echo "  build - Build the server and client containers"
 	@echo "  build-client - Build the client container"
 	@echo "  build-server - Build the server container"
-	@echo "  clean - Stop and delete containers"
+	@echo "  clean - Stop and delete containers and delete files"
+	@echo "  clean-storage - Delete uploaded files"
+	@echo "  clean-docker - Stop and delete containers"
 	@echo "  stop - Stop the containers"
 
-.PHONY: clean
-clean:
+.PHONY: clean-docker
+clean-docker:
 	docker-compose down
+
+
+.PHONY: clean-storage
+clean-storage:
+	find server/storage/ ! \( -name .gitignore \) -type f -delete
+	find server/storage/ -type d -depth 1 -delete
+
+.PHONY: clean
+clean: clean-docker clean-storage
 
 .PHONY: build-server
 build-server:
