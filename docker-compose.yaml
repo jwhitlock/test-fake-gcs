@@ -6,6 +6,8 @@ services:
     image: jwhitlock/gc-fake-storage:test
     volumes:
       - ./server/init_buckets:/data
+    environment:
+      - GCS_FAKE_EXTERNAL_URL=https://server:4443
 
   client:
     build: ./client
