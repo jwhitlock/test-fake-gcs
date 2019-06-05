@@ -103,6 +103,8 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
         list_buckets(client,"AFTER UPLOADING TEST FILES")
 
         # Verify files
+        print("VERIFYING TEST FILES")
+        print("--------------------")
         for obj_name, sig in signatures.items():
             blob = bucket.get_blob(obj_name)
             contents = blob.download_as_string()
@@ -115,6 +117,26 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
             else:
                 print("%s: Not OK! (size=%s -> %s, sha1=%s -> %s)" %
                       (obj_name, sig[0], size, sig[1], sig_out[1]))
+        print()
+
+
+def debug_requests_on():
+    """
+    Switches on logging of the requests module.
+
+    From https://stackoverflow.com/a/24588289/10612
+    """
+    from http.client import HTTPConnection
+    import logging
+
+    print("Debugging requests library.")
+    HTTPConnection.debuglevel = 1
+
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+    requests_log = logging.getLogger("requests.packages.urllib3")
+    requests_log.setLevel(logging.DEBUG)
+    requests_log.propagate = True
 
 
 if __name__ == "__main__":
@@ -127,6 +149,10 @@ if __name__ == "__main__":
     # FakeClient changes some module variables
     old_value = storage.blob._DOWNLOAD_URL_TEMPLATE
     print("Before using FakeClient, DOWNLOAD_URL_TEMPLATE=%r" % old_value)
+
+    DEBUG = os.environ.get('DEBUG', '')
+    if DEBUG:
+        debug_requests_on()
 
     with FakeClient(SERVER_URL) as client:
         new_value = storage.blob._DOWNLOAD_URL_TEMPLATE
