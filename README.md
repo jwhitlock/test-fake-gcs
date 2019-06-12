@@ -23,7 +23,14 @@ To try it, run ``make test``. This will:
   - Upload a text file
   - Download the text file
   - Delete the text file
+  - Upload any files in ``client/files``
 * Shut down the client and server
+
+To keep the server running after running tests, use ``make test-run``.
+You can then view the uploaded files at
+http://storage.gcs-server.127.0.0.1.nip.io:4443, using paths printed in the
+test output. You'll need to confirm a security exception for a self-signed
+certificate.
 
 Notes
 -----
