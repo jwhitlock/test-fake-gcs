@@ -14,11 +14,12 @@ import urllib3
 class FakeClient(storage.Client):
     """Client to bundle configuration needed for API requests to faked GCS."""
 
-    def __init__(self, server_url, project="fake"):
+    def __init__(self, server_url, public_host, project="fake"):
         """Initialize a FakeClient."""
 
         self.server_url = server_url
-        self.init_fake_urls(server_url)
+        self.public_host = public_host
+        self.init_fake_urls(server_url, public_host)
 
         # Create a session that is OK talking over insecure HTTPS
         # - Doesn't validate SSL, doesn't warn about insecure certs
@@ -35,7 +36,7 @@ class FakeClient(storage.Client):
     _FAKED_URLS = None
 
     @classmethod
-    def init_fake_urls(cls, server_url):
+    def init_fake_urls(cls, server_url, public_host):
         """
         Update URL variables in classes and modules.
 
@@ -46,16 +47,20 @@ class FakeClient(storage.Client):
             # Check that we're not changing the value, which would affect other
             # intances of FakeClient
             assert cls._FAKED_URLS['server_url'] == server_url
+            assert cls._FAKED_URLS['public_host'] == public_host
         else:
             cls._FAKED_URLS = {
                 'server_url': server_url,
+                'public_host': public_host,
                 'old_api_base_url': storage._http.Connection.API_BASE_URL,
+                'old_api_access_endpoint': storage.blob._API_ACCESS_ENDPOINT,
                 'old_download_tmpl': storage.blob._DOWNLOAD_URL_TEMPLATE,
                 'old_multipart_tmpl': storage.blob._MULTIPART_URL_TEMPLATE,
                 'old_resumable_tmpl': storage.blob._RESUMABLE_URL_TEMPLATE,
             }
 
             storage._http.Connection.API_BASE_URL = server_url
+            storage.blob._API_ACCESS_ENDPOINT = 'https://' + public_host
             storage.blob._DOWNLOAD_URL_TEMPLATE = (
                 u"%s/download/storage/v1{path}?alt=media" % server_url)
             base_tmpl = (
@@ -70,6 +75,8 @@ class FakeClient(storage.Client):
         if cls._FAKED_URLS is not None:
             storage._http.Connection.API_BASE_URL = (
                 cls._FAKED_URLS['old_api_base_url'])
+            storage.blob.Connection._API_ACCESS_ENDPOINT = (
+                cls._FAKED_URLS['old_api_access_endpoint'])
             storage.blob._DOWNLOAD_URL_TEMPLATE = (
                 cls._FAKED_URLS['old_download_tmpl'])
             storage.blob._MULTIPART_URL_TEMPLATE = (

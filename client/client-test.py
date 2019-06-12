@@ -6,6 +6,7 @@
 
 import hashlib
 import os
+import pprint
 import uuid
 
 from fake_client import FakeClient
@@ -20,7 +21,7 @@ def list_buckets(client, header=None):
     for bucket in client.list_buckets():
         print('Bucket "%s":' % bucket.name)
         for blob in bucket.list_blobs():
-            print('- %s' % blob.name)
+            print('- %s at %s' % (blob.name, blob.public_url))
     if header:
         print()
 
@@ -100,23 +101,23 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
             blob = bucket.blob(obj_name)
             blob.upload_from_filename(path)
         print()
-        list_buckets(client,"AFTER UPLOADING TEST FILES")
+        list_buckets(client, "AFTER UPLOADING TEST FILES")
 
         # Verify files
         print("VERIFYING TEST FILES")
         print("--------------------")
         for obj_name, sig in signatures.items():
+            size_orig, sha1_org = sig
             blob = bucket.get_blob(obj_name)
             contents = blob.download_as_string()
-            sha1 = hashlib.sha1(contents)
+            sha1 = hashlib.sha1(contents).hexdigest()
             size = len(contents)
-            sig_out = (size, sha1.hexdigest())
-            if sig == sig_out:
+            if sig == (size, sha1):
                 print("%s: OK (size=%s, sha1=%s)" %
-                      (obj_name, size, sig_out[1]))
+                      (obj_name, size, sha1))
             else:
                 print("%s: Not OK! (size=%s -> %s, sha1=%s -> %s)" %
-                      (obj_name, sig[0], size, sig[1], sig_out[1]))
+                      (obj_name, size_orig, size, sha1_org, sha1))
         print()
 
 
@@ -140,9 +141,13 @@ def debug_requests_on():
 
 
 if __name__ == "__main__":
-    SERVER_URL = os.environ.get('SERVER_URL', '')
-    assert SERVER_URL, 'Set SERVER_URL in the environment'
-    print("Connecting to GCS server at %s" % SERVER_URL)
+    GCS_FAKE_EXTERNAL_URL = os.environ.get('GCS_FAKE_EXTERNAL_URL', '')
+    GCS_FAKE_PUBLIC_HOST = os.environ.get('GCS_FAKE_PUBLIC_HOST', '')
+    assert GCS_FAKE_EXTERNAL_URL, 'Set env GCS_FAKE_EXTERNAL_URL'
+    assert GCS_FAKE_PUBLIC_HOST, 'Set env GCS_FAKE_PUBLIC_HOST'
+    assert GCS_FAKE_EXTERNAL_URL != GCS_FAKE_PUBLIC_HOST
+    print("Connecting to GCS server at %s (public host %s)" %
+          (GCS_FAKE_EXTERNAL_URL, GCS_FAKE_PUBLIC_HOST))
 
     TEST_FILE_DIR = os.environ.get('TEST_FILE_DIR', '')
 
@@ -154,11 +159,12 @@ if __name__ == "__main__":
     if DEBUG:
         debug_requests_on()
 
-    with FakeClient(SERVER_URL) as client:
+    with FakeClient(GCS_FAKE_EXTERNAL_URL, GCS_FAKE_PUBLIC_HOST) as client:
         new_value = storage.blob._DOWNLOAD_URL_TEMPLATE
         print(
             "After initializing FakeClient, DOWNLOAD_URL_TEMPLATE=%r"
             % new_value)
+        pprint.pprint(client._FAKED_URLS)
         assert new_value != old_value
         run_tests(client, test_file_dir=TEST_FILE_DIR)
 

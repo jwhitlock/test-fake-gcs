@@ -11,6 +11,7 @@ default:
 	@echo ""
 	@ecgo "Main rules"
 	@echo "  test - Run the tests in containers"
+	@echo "  test-run - Run the tests, and keep the server running"
 	@echo "  test-quick - Run the tests, without building or safety checks"
 	@echo "  lint - Run the linter on client files"
 	@echo ""
@@ -49,14 +50,18 @@ build: build-server build-client
 
 .PHONY: test-quick
 test-quick:
-	docker-compose run --rm client
+	-docker-compose run --rm client
+	docker-compose logs server
 
 .PHONY: stop
 stop:
 	docker-compose stop
 
+.PHONY: test-run
+test-run: clean build test-quick
+
 .PHONY: test
-test: clean build test-quick stop
+test: test-run stop
 
 .PHONY: lint
 lint: build-client
