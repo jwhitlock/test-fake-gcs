@@ -9,7 +9,7 @@ import os
 import pprint
 import uuid
 
-from fake_client import FakeClient
+from fake_client import FakeGCSClient
 from google.cloud import storage
 
 
@@ -17,11 +17,11 @@ def list_buckets(client, header=None):
     """Print contents of buckets."""
     if header:
         print(header)
-        print('-' * len(header))
+        print("-" * len(header))
     for bucket in client.list_buckets():
         print('Bucket "%s":' % bucket.name)
         for blob in bucket.list_blobs():
-            print('- %s at %s' % (blob.name, blob.public_url))
+            print("- %s at %s" % (blob.name, blob.public_url))
     if header:
         print()
 
@@ -33,11 +33,11 @@ def test_files(rootDir):
             full_path = os.path.join(dirName, fname)
 
             # Create a object path relative to the bucket
-            obj_path = full_path.replace(rootDir, '')
-            while obj_path.startswith('/'):
+            obj_path = full_path.replace(rootDir, "")
+            while obj_path.startswith("/"):
                 obj_path = obj_path[1:]
 
-            if obj_path == '.gitignore':
+            if obj_path == ".gitignore":
                 continue
 
             yield obj_path, full_path
@@ -55,7 +55,7 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
     bucket_name = bucket_name or "test_%s" % uuid.uuid4()
     object_name = object_name or "test_%s.txt" % uuid.uuid4()
 
-    list_buckets(client, 'FILES AT START')
+    list_buckets(client, "FILES AT START")
 
     # Create the bucket
     bucket = client.create_bucket(bucket_name)
@@ -63,20 +63,20 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
     # Create a file in the bucket
     blob = bucket.blob(object_name)
     blob.upload_from_string("This is a test file.\n\nIt has a few lines.\n")
-    list_buckets(client, 'FILES AFTER UPLOAD')
+    list_buckets(client, "FILES AFTER UPLOAD")
 
     # List the file contents
     print("CONTENTS OF TEST FILE")
     print("---------------------")
     blob = bucket.get_blob(object_name)
     contents = blob.download_as_string()
-    print(contents.decode('utf8'))
+    print(contents.decode("utf8"))
     print("---------------------")
     print()
 
     # Delete the file
     blob.delete()
-    list_buckets(client, 'FILES AFTER DELETION')
+    list_buckets(client, "FILES AFTER DELETION")
 
     # Upload any test files
     if test_file_dir:
@@ -87,7 +87,7 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
             # Calculate the hash, size
             sha1 = hashlib.sha1()
             size = 0
-            with open(path, 'rb') as test_file:
+            with open(path, "rb") as test_file:
                 while True:
                     data = test_file.read(1024)
                     if not data:
@@ -113,11 +113,12 @@ def run_tests(client, bucket_name=None, object_name=None, test_file_dir=None):
             sha1 = hashlib.sha1(contents).hexdigest()
             size = len(contents)
             if sig == (size, sha1):
-                print("%s: OK (size=%s, sha1=%s)" %
-                      (obj_name, size, sha1))
+                print("%s: OK (size=%s, sha1=%s)" % (obj_name, size, sha1))
             else:
-                print("%s: Not OK! (size=%s -> %s, sha1=%s -> %s)" %
-                      (obj_name, size_orig, size, sha1_org, sha1))
+                print(
+                    "%s: Not OK! (size=%s -> %s, sha1=%s -> %s)"
+                    % (obj_name, size_orig, size, sha1_org, sha1)
+                )
         print()
 
 
@@ -141,29 +142,29 @@ def debug_requests_on():
 
 
 if __name__ == "__main__":
-    GCS_FAKE_EXTERNAL_URL = os.environ.get('GCS_FAKE_EXTERNAL_URL', '')
-    GCS_FAKE_PUBLIC_HOST = os.environ.get('GCS_FAKE_PUBLIC_HOST', '')
-    assert GCS_FAKE_EXTERNAL_URL, 'Set env GCS_FAKE_EXTERNAL_URL'
-    assert GCS_FAKE_PUBLIC_HOST, 'Set env GCS_FAKE_PUBLIC_HOST'
+    GCS_FAKE_EXTERNAL_URL = os.environ.get("GCS_FAKE_EXTERNAL_URL", "")
+    GCS_FAKE_PUBLIC_HOST = os.environ.get("GCS_FAKE_PUBLIC_HOST", "")
+    assert GCS_FAKE_EXTERNAL_URL, "Set env GCS_FAKE_EXTERNAL_URL"
+    assert GCS_FAKE_PUBLIC_HOST, "Set env GCS_FAKE_PUBLIC_HOST"
     assert GCS_FAKE_EXTERNAL_URL != GCS_FAKE_PUBLIC_HOST
-    print("Connecting to GCS server at %s (public host %s)" %
-          (GCS_FAKE_EXTERNAL_URL, GCS_FAKE_PUBLIC_HOST))
+    print(
+        "Connecting to GCS server at %s (public host %s)"
+        % (GCS_FAKE_EXTERNAL_URL, GCS_FAKE_PUBLIC_HOST)
+    )
 
-    TEST_FILE_DIR = os.environ.get('TEST_FILE_DIR', '')
+    TEST_FILE_DIR = os.environ.get("TEST_FILE_DIR", "")
 
     # FakeClient changes some module variables
     old_value = storage.blob._DOWNLOAD_URL_TEMPLATE
     print("Before using FakeClient, DOWNLOAD_URL_TEMPLATE=%r" % old_value)
 
-    DEBUG = os.environ.get('DEBUG', '')
+    DEBUG = os.environ.get("DEBUG", "")
     if DEBUG:
         debug_requests_on()
 
-    with FakeClient(GCS_FAKE_EXTERNAL_URL, GCS_FAKE_PUBLIC_HOST) as client:
+    with FakeGCSClient(GCS_FAKE_EXTERNAL_URL, GCS_FAKE_PUBLIC_HOST) as client:
         new_value = storage.blob._DOWNLOAD_URL_TEMPLATE
-        print(
-            "After initializing FakeClient, DOWNLOAD_URL_TEMPLATE=%r"
-            % new_value)
+        print("After initializing FakeClient, DOWNLOAD_URL_TEMPLATE=%r" % new_value)
         pprint.pprint(client._FAKED_URLS)
         assert new_value != old_value
         run_tests(client, test_file_dir=TEST_FILE_DIR)
@@ -172,5 +173,6 @@ if __name__ == "__main__":
     returned_value = storage.blob._DOWNLOAD_URL_TEMPLATE
     print(
         "After closing FakeClient, DOWNLOAD_URL_TEMPLATE=%r"
-        % storage.blob._DOWNLOAD_URL_TEMPLATE)
+        % storage.blob._DOWNLOAD_URL_TEMPLATE
+    )
     assert returned_value == old_value

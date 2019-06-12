@@ -11,7 +11,7 @@ import requests
 import urllib3
 
 
-class FakeClient(storage.Client):
+class FakeGCSClient(storage.Client):
     """Client to bundle configuration needed for API requests to faked GCS."""
 
     def __init__(self, server_url, public_host, project="fake"):
@@ -29,9 +29,8 @@ class FakeClient(storage.Client):
 
         # Initialize the base class
         super().__init__(
-            project=project,
-            credentials=AnonymousCredentials(),
-            _http=weak_http)
+            project=project, credentials=AnonymousCredentials(), _http=weak_http
+        )
 
     _FAKED_URLS = None
 
@@ -45,44 +44,40 @@ class FakeClient(storage.Client):
         """
         if cls._FAKED_URLS:
             # Check that we're not changing the value, which would affect other
-            # intances of FakeClient
-            assert cls._FAKED_URLS['server_url'] == server_url
-            assert cls._FAKED_URLS['public_host'] == public_host
+            # instances of FakeGKSClient
+            assert cls._FAKED_URLS["server_url"] == server_url
+            assert cls._FAKED_URLS["public_host"] == public_host
         else:
             cls._FAKED_URLS = {
-                'server_url': server_url,
-                'public_host': public_host,
-                'old_api_base_url': storage._http.Connection.API_BASE_URL,
-                'old_api_access_endpoint': storage.blob._API_ACCESS_ENDPOINT,
-                'old_download_tmpl': storage.blob._DOWNLOAD_URL_TEMPLATE,
-                'old_multipart_tmpl': storage.blob._MULTIPART_URL_TEMPLATE,
-                'old_resumable_tmpl': storage.blob._RESUMABLE_URL_TEMPLATE,
+                "server_url": server_url,
+                "public_host": public_host,
+                "old_api_base_url": storage._http.Connection.API_BASE_URL,
+                "old_api_access_endpoint": storage.blob._API_ACCESS_ENDPOINT,
+                "old_download_tmpl": storage.blob._DOWNLOAD_URL_TEMPLATE,
+                "old_multipart_tmpl": storage.blob._MULTIPART_URL_TEMPLATE,
+                "old_resumable_tmpl": storage.blob._RESUMABLE_URL_TEMPLATE,
             }
 
             storage._http.Connection.API_BASE_URL = server_url
-            storage.blob._API_ACCESS_ENDPOINT = 'https://' + public_host
+            storage.blob._API_ACCESS_ENDPOINT = "https://" + public_host
             storage.blob._DOWNLOAD_URL_TEMPLATE = (
-                u"%s/download/storage/v1{path}?alt=media" % server_url)
-            base_tmpl = (
-                u"%s/upload/storage/v1{bucket_path}/o?uploadType="
-                % server_url)
-            storage.blob._MULTIPART_URL_TEMPLATE = base_tmpl + u"multipart"
-            storage.blob._RESUMABLE_URL_TEMPLATE = base_tmpl + u"resumable"
+                "%s/download/storage/v1{path}?alt=media" % server_url
+            )
+            base_tmpl = "%s/upload/storage/v1{bucket_path}/o?uploadType=" % server_url
+            storage.blob._MULTIPART_URL_TEMPLATE = base_tmpl + "multipart"
+            storage.blob._RESUMABLE_URL_TEMPLATE = base_tmpl + "resumable"
 
     @classmethod
     def undo_fake_urls(cls):
         """Reset the faked URL variables in classes and modules."""
         if cls._FAKED_URLS is not None:
-            storage._http.Connection.API_BASE_URL = (
-                cls._FAKED_URLS['old_api_base_url'])
-            storage.blob.Connection._API_ACCESS_ENDPOINT = (
-                cls._FAKED_URLS['old_api_access_endpoint'])
-            storage.blob._DOWNLOAD_URL_TEMPLATE = (
-                cls._FAKED_URLS['old_download_tmpl'])
-            storage.blob._MULTIPART_URL_TEMPLATE = (
-                cls._FAKED_URLS['old_multipart_tmpl'])
-            storage.blob._RESUMABLE_URL_TEMPLATE = (
-                cls._FAKED_URLS['old_resumable_tmpl'])
+            storage._http.Connection.API_BASE_URL = cls._FAKED_URLS["old_api_base_url"]
+            storage.blob.Connection._API_ACCESS_ENDPOINT = cls._FAKED_URLS[
+                "old_api_access_endpoint"
+            ]
+            storage.blob._DOWNLOAD_URL_TEMPLATE = cls._FAKED_URLS["old_download_tmpl"]
+            storage.blob._MULTIPART_URL_TEMPLATE = cls._FAKED_URLS["old_multipart_tmpl"]
+            storage.blob._RESUMABLE_URL_TEMPLATE = cls._FAKED_URLS["old_resumable_tmpl"]
             cls._FAKED_URLS = None
 
     def __enter__(self):
