@@ -15,14 +15,13 @@ class FakeGCSClient(storage.Client):
     """Client to bundle configuration needed for API requests to faked GCS."""
 
     def __init__(self, server_url, public_host, project="fake"):
-        """Initialize a FakeClient."""
+        """Initialize a FakeGCSClient."""
 
         self.server_url = server_url
         self.public_host = public_host
         self.init_fake_urls(server_url, public_host)
 
         # Create a session that is OK talking over insecure HTTPS
-        # - Doesn't validate SSL, doesn't warn about insecure certs
         weak_http = requests.Session()
         weak_http.verify = False
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -45,12 +44,22 @@ class FakeGCSClient(storage.Client):
         if cls._FAKED_URLS:
             # Check that we're not changing the value, which would affect other
             # instances of FakeGKSClient
-            assert cls._FAKED_URLS["server_url"] == server_url
-            assert cls._FAKED_URLS["public_host"] == public_host
+            if cls._FAKED_URLS["server_url"] != server_url:
+                raise ValueError(
+                    'server_url already "%s", can\'t change to "%s"'
+                    % (cls._FAKED_URLS["server_url"], server_url)
+                )
+            if cls._FAKED_URLS["public_host"] != public_host:
+                raise ValueError(
+                    'public_host already "%s", can\'t change to "%s"'
+                    % (cls._FAKED_URLS["public_host"], public_host)
+                )
+            cls._FAKED_URLS["depth"] += 1
         else:
             cls._FAKED_URLS = {
                 "server_url": server_url,
                 "public_host": public_host,
+                "depth": 1,
                 "old_api_base_url": storage._http.Connection.API_BASE_URL,
                 "old_api_access_endpoint": storage.blob._API_ACCESS_ENDPOINT,
                 "old_download_tmpl": storage.blob._DOWNLOAD_URL_TEMPLATE,
@@ -69,19 +78,30 @@ class FakeGCSClient(storage.Client):
 
     @classmethod
     def undo_fake_urls(cls):
-        """Reset the faked URL variables in classes and modules."""
-        if cls._FAKED_URLS is not None:
+        """
+        Reset the faked URL variables in classes and modules.
+
+        Returns True if we've returned to original,
+        False if still on faked URLs due to nested clients.
+        """
+        if cls._FAKED_URLS is None:
+            return True
+        cls._FAKED_URLS["depth"] -= 1
+        if cls._FAKED_URLS["depth"] <= 0:
             storage._http.Connection.API_BASE_URL = cls._FAKED_URLS["old_api_base_url"]
-            storage.blob.Connection._API_ACCESS_ENDPOINT = cls._FAKED_URLS[
+            storage.blob._API_ACCESS_ENDPOINT = cls._FAKED_URLS[
                 "old_api_access_endpoint"
             ]
             storage.blob._DOWNLOAD_URL_TEMPLATE = cls._FAKED_URLS["old_download_tmpl"]
             storage.blob._MULTIPART_URL_TEMPLATE = cls._FAKED_URLS["old_multipart_tmpl"]
             storage.blob._RESUMABLE_URL_TEMPLATE = cls._FAKED_URLS["old_resumable_tmpl"]
             cls._FAKED_URLS = None
+            return True
+        else:
+            return False
 
     def __enter__(self):
-        """Allow FakeClient to be used as a context manager."""
+        """Allow FakeGCSClient to be used as a context manager."""
         return self
 
     def __exit__(self, *args):
