@@ -3,13 +3,15 @@
 version: "3.0"
 services:
   server:
-    image: jwhitlock/gc-fake-storage:test
+    image: fsouza/fake-gcs-server
     volumes:
       - ./server/init_buckets:/data
       - ./server/storage:/storage
-    environment:
-      - GCS_FAKE_EXTERNAL_URL=https://gcs-server.127.0.0.1.nip.io:4443
-      - GCS_FAKE_PUBLIC_HOST=storage.gcs-server.127.0.0.1.nip.io:4443
+    command:
+      - -public-host=storage.gcs-server.127.0.0.1.nip.io:4443
+      - -host=0.0.0.0
+      - -port=4443
+      - -external-url=https://gcs-server.127.0.0.1.nip.io:4443
     ports:
         - 4443:4443
 
