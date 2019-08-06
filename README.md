@@ -2,12 +2,7 @@ Tests for fake Google Cloud Storage
 ===================================
 
 [fsouza/fake-gcs-server] is a Go library providing a fake Google Cloud Storage
-(GCS) API server, intended for testing. [teone/gc-fake-storage] dockerizes it
-as a server, available at [matteoscandolo/gc-fake-storage].
-[jwhitlock/gc-fake-storage] is a fork that keeps up-to-date with
-`fake-gcs-server`.
-
-This project demonstrates using the Docker image with the
+(GCS) API server. This project demonstrates using the Docker image with the
 [Python library for Google Cloud Storage], with customizations in a
 derived ``FakeClient``.
 
@@ -31,6 +26,19 @@ You can then view the uploaded files at
 http://storage.gcs-server.127.0.0.1.nip.io:4443, using paths printed in the
 test output. You'll need to confirm a security exception for a self-signed
 certificate.
+
+History
+-------
+[teone/gc-fake-storage] first dockerized fake-gcs-server in March 2019,
+and published it at [matteoscandolo/gc-fake-storage].
+
+Starting in May 2019, I started a fork [jwhitlock/gc-fake-storage], to
+get the latest `fake-gcs-server` code and make changes to get the Python
+client working for more use cases. I integrated into the [Tecken]
+development environment in July 2019 ([PR #1830]).
+
+fsouza and teone merged the two projects in July 2019 ([PR #47]), and the
+official docker images were moved to [fsouza's Dockerhub].
 
 Notes
 -----
@@ -60,7 +68,11 @@ files with JSON content.
 Deleting buckets is not (yet) supported by ``fsouza/fake-gcs-server``.
 
 [Python library for Google Cloud Storage]: https://github.com/googleapis/google-cloud-python/tree/master/storage
-[jwhitlock/gc-fake-storage]: https://github.com/jwhitlock/gc-fake-storage
+[jwhitlock/gc-fake-storage]: https://github.com/jwhitlock/gc-fake-storage/tree/test
 [fsouza/fake-gcs-server]: https://github.com/fsouza/fake-gcs-server/
 [matteoscandolo/gc-fake-storage]: https://hub.docker.com/r/matteoscandolo/gc-fake-storage
 [teone/gc-fake-storage]: https://github.com/teone/gc-fake-storage
+[Tecken]: https://github.com/mozilla-services/tecken
+[PR #1830]: https://github.com/mozilla-services/tecken/pull/1830
+[PR #47]: https://github.com/fsouza/fake-gcs-server/pull/47
+[fsouza's Dockerhub]: https://hub.docker.com/r/fsouza/fake-gcs-server
