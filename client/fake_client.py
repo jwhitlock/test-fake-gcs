@@ -26,6 +26,7 @@ class FakeGCSClient(storage.Client):
         weak_http.verify = False
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+        # Override the default API endpoint
         client_options = {
             'api_endpoint': server_url
         }
